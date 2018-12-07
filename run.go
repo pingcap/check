@@ -94,20 +94,22 @@ func RunAll(runConf *RunConf) *Result {
 	}
 
 	wg := sync.WaitGroup{}
-	rets := make([]*Result, len(allSuites))
-	for i, suite := range allSuites {
-		wg.Add(1)
-		rets[i] = &Result{}
-		go func(ret *Result, s interface{}) {
-			defer wg.Done()
-			ret = Run(s, runConf)
-		}(rets[i], suite)
+	suiteRunners := make([]*suiteRunner, 0, len(allSuites))
+	for _, suite := range allSuites {
+		suiteRunners = append(suiteRunners, parallelRun(suite, runConf, &wg))
 	}
 	wg.Wait()
-	for _, ret := range rets {
+	for _, runner := range suiteRunners {
+		ret := &runner.tracker.result
 		result.Add(ret)
 	}
 	return &result
+}
+
+func parallelRun(suite interface{}, runConf *RunConf, wg *sync.WaitGroup) *suiteRunner {
+	runner := newSuiteRunner(suite, runConf)
+	runner.asyncRun(wg)
+	return runner
 }
 
 // Run runs the provided test suite using the provided run configuration.
