@@ -639,32 +639,7 @@ func (runner *suiteRunner) asyncRun(wg *sync.WaitGroup) {
 	c := runner.runFixture(runner.setUpSuite, "", nil)
 	go func() {
 		defer wg.Done()
-		if c == nil || c.status() == succeededSt {
-			var delayedC []*C
-
-			for i := 0; i != len(runner.tests); i++ {
-				c := runner.forkTest(runner.tests[i])
-				select {
-				case <-c.done:
-				case <-c.parallel:
-					delayedC = append(delayedC, c)
-				}
-				if c.status() == fixturePanickedSt {
-					runner.skipTests(missedSt, runner.tests[i+1:])
-					break
-				}
-			}
-
-			// Wait those parallel tests finish.
-			for _, delayed := range delayedC {
-				<-delayed.done
-			}
-		} else if c != nil && c.status() == skippedSt {
-			runner.skipTests(skippedSt, runner.tests)
-		} else {
-			runner.skipTests(missedSt, runner.tests)
-		}
-		runner.runFixture(runner.tearDownSuite, "", nil)
+		runner.doRun(c)
 
 		runner.tracker.waitAndStop()
 		if runner.keepDir {
@@ -675,36 +650,42 @@ func (runner *suiteRunner) asyncRun(wg *sync.WaitGroup) {
 	}()
 }
 
+func (runner *suiteRunner) doRun(c *C) {
+	if c == nil || c.status() == succeededSt {
+		var delayedC []*C
+
+		for i := 0; i != len(runner.tests); i++ {
+			c := runner.forkTest(runner.tests[i])
+			select {
+			case <-c.done:
+			case <-c.parallel:
+				delayedC = append(delayedC, c)
+			}
+			if c.status() == fixturePanickedSt {
+				runner.skipTests(missedSt, runner.tests[i+1:])
+				break
+			}
+		}
+
+		// Wait those parallel tests finish.
+		for _, delayed := range delayedC {
+			<-delayed.done
+		}
+	} else if c != nil && c.status() == skippedSt {
+		runner.skipTests(skippedSt, runner.tests)
+	} else {
+		runner.skipTests(missedSt, runner.tests)
+	}
+	runner.runFixture(runner.tearDownSuite, "", nil)
+}
+
 // Run all methods in the given suite.
 func (runner *suiteRunner) run() *Result {
 	if runner.tracker.result.RunError == nil && len(runner.tests) > 0 {
 		runner.tracker.start()
 		if runner.checkFixtureArgs() {
 			c := runner.runFixture(runner.setUpSuite, "", nil)
-			if c == nil || c.status() == succeededSt {
-				var delayedC []*C
-				for i := 0; i != len(runner.tests); i++ {
-					c := runner.forkTest(runner.tests[i])
-					select {
-					case <-c.done:
-					case <-c.parallel:
-						delayedC = append(delayedC, c)
-					}
-					if c.status() == fixturePanickedSt {
-						runner.skipTests(missedSt, runner.tests[i+1:])
-						break
-					}
-				}
-				// Wait those parallel tests finish.
-				for _, delayed := range delayedC {
-					<-delayed.done
-				}
-			} else if c != nil && c.status() == skippedSt {
-				runner.skipTests(skippedSt, runner.tests)
-			} else {
-				runner.skipTests(missedSt, runner.tests)
-			}
-			runner.runFixture(runner.tearDownSuite, "", nil)
+			runner.doRun(c)
 		} else {
 			runner.skipTests(missedSt, runner.tests)
 		}
