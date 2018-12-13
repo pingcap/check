@@ -44,10 +44,11 @@ var (
 	newListFlag    = flag.Bool("check.list", false, "List the names of all tests that will be run")
 	newWorkFlag    = flag.Bool("check.work", false, "Display and do not remove the test working directory")
 	newExcludeFlag = flag.String("check.exclude", "", "Regular expression to exclude tests to run")
+
+	CustomParallelSuiteFlag = flag.Bool("check.p", false, "Run suites in parallel")
 )
 
 var CustomVerboseFlag bool
-var CustomParallelSuiteFlag bool
 
 // TestingT runs all test suites registered with the Suite function,
 // printing results to stdout, and reporting any failures back to
@@ -86,7 +87,7 @@ func TestingT(testingT *testing.T) {
 // provided run configuration.
 func RunAll(runConf *RunConf) *Result {
 	result := Result{}
-	if !CustomParallelSuiteFlag {
+	if !*CustomParallelSuiteFlag {
 		for _, suite := range allSuites {
 			result.Add(Run(suite, runConf))
 		}

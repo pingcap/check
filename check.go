@@ -623,6 +623,7 @@ func (runner *suiteRunner) asyncRun(wg *sync.WaitGroup) {
 	if runner.tracker.result.RunError != nil || len(runner.tests) <= 0 {
 		return
 	}
+	runner.tracker.start()
 	if !runner.checkFixtureArgs() {
 		runner.skipTests(missedSt, runner.tests)
 		runner.tracker.waitAndStop()
@@ -634,7 +635,6 @@ func (runner *suiteRunner) asyncRun(wg *sync.WaitGroup) {
 		return
 	}
 
-	runner.tracker.start()
 	wg.Add(1)
 	c := runner.runFixture(runner.setUpSuite, "", nil)
 	go func() {
