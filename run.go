@@ -95,10 +95,12 @@ func RunAll(runConf *RunConf) *Result {
 	}
 
 	wg := sync.WaitGroup{}
+	notifyRunningSuitesCh := make(chan struct{})
 	suiteRunners := make([]*suiteRunner, 0, len(allSuites))
 	for _, suite := range allSuites {
-		suiteRunners = append(suiteRunners, parallelRun(suite, runConf, &wg))
+		suiteRunners = append(suiteRunners, parallelRun(suite, runConf, &wg, notifyRunningSuitesCh))
 	}
+	close(notifyRunningSuitesCh)
 	wg.Wait()
 	for _, runner := range suiteRunners {
 		ret := &runner.tracker.result
@@ -107,9 +109,9 @@ func RunAll(runConf *RunConf) *Result {
 	return &result
 }
 
-func parallelRun(suite interface{}, runConf *RunConf, wg *sync.WaitGroup) *suiteRunner {
+func parallelRun(suite interface{}, runConf *RunConf, wg *sync.WaitGroup, notifyRunningSuitesCh chan struct{}) *suiteRunner {
 	runner := newSuiteRunner(suite, runConf)
-	runner.asyncRun(wg)
+	runner.asyncRun(wg, notifyRunningSuitesCh)
 	return runner
 }
 
