@@ -106,8 +106,7 @@ func RunAll(runConf *RunConf) *Result {
 		}
 
 		for _, suite := range allSerialSuites {
-			ret := Run(suite, runConf)
-			result.Add(ret)
+			result.Add(Run(suite, runConf))
 		}
 		return &result
 	}
@@ -126,8 +125,7 @@ func RunAll(runConf *RunConf) *Result {
 	}
 
 	for _, suite := range allSerialSuites {
-		ret := Run(suite, runConf)
-		result.Add(ret)
+		result.Add(Run(suite, runConf))
 	}
 	return &result
 }
