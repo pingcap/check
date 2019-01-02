@@ -13,13 +13,25 @@ import (
 // -----------------------------------------------------------------------
 // Test suite registry.
 
-var allSuites []interface{}
+var (
+	allParrallelSuites []interface{}
+	allSerialSuites    []interface{}
+	)
+
 
 // Suite registers the given value as a test suite to be run. Any methods
 // starting with the Test prefix in the given value will be considered as
 // a test method.
 func Suite(suite interface{}) interface{} {
-	allSuites = append(allSuites, suite)
+	allParrallelSuites = append(allParrallelSuites, suite)
+	return suite
+}
+
+// SerialSuites registers the given value as a test suite to be run serially. Any methods
+// starting with the Test prefix in the given value will be considered as
+// a test method.
+func SerialSuites(suite interface{}) interface{} {
+	allSerialSuites = append(allSerialSuites, suite)
 	return suite
 }
 
@@ -88,7 +100,7 @@ func TestingT(testingT *testing.T) {
 func RunAll(runConf *RunConf) *Result {
 	result := Result{}
 	if !*CustomParallelSuiteFlag {
-		for _, suite := range allSuites {
+		for _, suite := range allParrallelSuites {
 			result.Add(Run(suite, runConf))
 		}
 		return &result
@@ -96,14 +108,19 @@ func RunAll(runConf *RunConf) *Result {
 
 	wg := sync.WaitGroup{}
 	notifyRunningSuitesCh := make(chan struct{})
-	suiteRunners := make([]*suiteRunner, 0, len(allSuites))
-	for _, suite := range allSuites {
+	suiteRunners := make([]*suiteRunner, 0, len(allParrallelSuites))
+	for _, suite := range allParrallelSuites {
 		suiteRunners = append(suiteRunners, parallelRun(suite, runConf, &wg, notifyRunningSuitesCh))
 	}
 	close(notifyRunningSuitesCh)
 	wg.Wait()
 	for _, runner := range suiteRunners {
 		ret := &runner.tracker.result
+		result.Add(ret)
+	}
+
+	for _, suite := range allSerialSuites {
+		ret := Run(suite, runConf)
 		result.Add(ret)
 	}
 	return &result
@@ -125,7 +142,7 @@ func Run(suite interface{}, runConf *RunConf) *Result {
 // Suite function that will be run with the provided run configuration.
 func ListAll(runConf *RunConf) []string {
 	var names []string
-	for _, suite := range allSuites {
+	for _, suite := range allParrallelSuites {
 		names = append(names, List(suite, runConf)...)
 	}
 	return names
