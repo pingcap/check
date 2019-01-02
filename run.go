@@ -145,6 +145,10 @@ func ListAll(runConf *RunConf) []string {
 	for _, suite := range allParrallelSuites {
 		names = append(names, List(suite, runConf)...)
 	}
+
+	for _, suite := range allSerialSuites {
+		names = append(names, List(suite, runConf)...)
+	}
 	return names
 }
 
