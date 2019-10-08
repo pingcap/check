@@ -456,3 +456,39 @@ func (checker *implementsChecker) Check(params []interface{}, names []string) (r
 	}
 	return obtained.Type().Implements(ifaceptr.Elem().Type()), ""
 }
+
+// -----------------------------------------------------------------------
+// Contains checker.
+
+type ContainsChecker struct {
+	*CheckerInfo
+}
+
+// The ContainsChecker checker verifies whether the obtained map contains the item.
+//
+// For example:
+//
+//     c.Assert(obtained, Contains, item)
+//
+var Contains Checker = &ContainsChecker{
+	&CheckerInfo{Name: "Contains", Params: []string{"obtained", "item"}},
+}
+
+func (checker *ContainsChecker) Check(params []interface{}, names []string) (result bool, error string) {
+	obtained := reflect.ValueOf(params[0])
+	item := reflect.ValueOf(params[1])
+	if !obtained.IsValid() {
+		return false, "invalid obtained."
+	}
+	if obtained.Kind() != reflect.Map {
+		return false, "obtained must be map."
+	}
+	if !item.IsValid() {
+		return false, "invalid item."
+	}
+	if value := obtained.MapIndex(item); !value.IsValid() || value.IsNil() {
+		return false, "There is no the key in map."
+	} else {
+		return true, ""
+	}
+}
