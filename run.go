@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pingcap/log"
 )
 
 // -----------------------------------------------------------------------
@@ -66,6 +68,8 @@ var CustomVerboseFlag bool
 // printing results to stdout, and reporting any failures back to
 // the "testing" package.
 func TestingT(testingT *testing.T) {
+	lg, r, _ := log.InitLogger(&log.Config{Level: os.Getenv("log_level")})
+	log.ReplaceGlobals(lg, r)
 	benchTime := *newBenchTime
 	if benchTime == 1*time.Second {
 		benchTime = *oldBenchTime
