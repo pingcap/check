@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pingcap/log"
+	"go.uber.org/zap"
 )
 
 // -----------------------------------------------------------------------
@@ -68,8 +69,9 @@ var CustomVerboseFlag bool
 // printing results to stdout, and reporting any failures back to
 // the "testing" package.
 func TestingT(testingT *testing.T) {
-	lg, r, _ := log.InitLogger(&log.Config{Level: os.Getenv("log_level")})
-	log.ReplaceGlobals(lg, r)
+	l := zap.NewAtomicLevel()
+	l.UnmarshalText([]byte(os.Getenv("log_level")))
+	log.SetLevel(l.Level())
 	benchTime := *newBenchTime
 	if benchTime == 1*time.Second {
 		benchTime = *oldBenchTime
@@ -190,9 +192,9 @@ func (r *Result) Add(other *Result) {
 }
 
 func (r *Result) Passed() bool {
-	return (r.Failed == 0 && r.Panicked == 0 &&
-		r.FixturePanicked == 0 && r.Missed == 0 &&
-		r.RunError == nil)
+	return r.Failed == 0 && r.Panicked == 0 &&
+			r.FixturePanicked == 0 && r.Missed == 0 &&
+			r.RunError == nil
 }
 
 func (r *Result) String() string {
