@@ -70,8 +70,9 @@ var CustomVerboseFlag bool
 // the "testing" package.
 func TestingT(testingT *testing.T) {
 	l := zap.NewAtomicLevel()
-	l.UnmarshalText([]byte(os.Getenv("log_level")))
-	log.SetLevel(l.Level())
+	if l.UnmarshalText([]byte(os.Getenv("log_level"))) == nil {
+		log.SetLevel(l.Level())
+	}
 	benchTime := *newBenchTime
 	if benchTime == 1*time.Second {
 		benchTime = *oldBenchTime
