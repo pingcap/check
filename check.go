@@ -42,6 +42,7 @@ const (
 	panickedSt
 	fixturePanickedSt
 	missedSt
+	timeoutSt
 )
 
 type funcStatus uint32
@@ -474,7 +475,7 @@ func (tracker *resultTracker) _loopRoutine() {
 							tracker.result.Succeeded++
 						}
 					}
-				case failedSt:
+				case failedSt, timeoutSt:
 					tracker.result.Failed++
 				case panickedSt:
 					if c.kind == fixtureKd {
@@ -727,7 +728,14 @@ func (runner *suiteRunner) forkCall(method *methodType, kind funcKind, testName 
 	go (func() {
 		runner.reportCallStarted(c)
 		defer runner.callDone(c)
+		startTime := time.Now()
+
 		dispatcher(c)
+
+		// Don't allow a single to run more than 3 seconds!
+		if c.status() == succeededSt && time.Since(startTime) > 3*time.Second {
+			c.setStatus(timeoutSt)
+		}
 	})()
 	return c
 }
@@ -923,6 +931,8 @@ func (runner *suiteRunner) reportCallDone(c *C) {
 		runner.output.WriteCallSuccess("SKIP", c)
 	case failedSt:
 		runner.output.WriteCallProblem("FAIL", c)
+	case timeoutSt:
+		runner.output.WriteCallProblem("TIMEOUT", c)
 	case panickedSt:
 		runner.output.WriteCallProblem("PANIC", c)
 	case fixturePanickedSt:
