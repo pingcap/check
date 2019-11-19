@@ -19,8 +19,7 @@ import (
 var (
 	allParallelSuites []interface{}
 	allSerialSuites   []interface{}
-	)
-
+)
 
 // Suite registers the given value as a test suite to be run. Any methods
 // starting with the Test prefix in the given value will be considered as
@@ -55,6 +54,7 @@ var (
 	newStreamFlag  = flag.Bool("check.vv", false, "Super verbose mode (disables output caching)")
 	newBenchFlag   = flag.Bool("check.b", false, "Run benchmarks")
 	newBenchTime   = flag.Duration("check.btime", 1*time.Second, "approximate run time for each benchmark")
+	methodTimeout  = flag.Duration("check.timeout", 0, "timeout value for each function")
 	newBenchMem    = flag.Bool("check.bmem", false, "Report memory benchmarks")
 	newListFlag    = flag.Bool("check.list", false, "List the names of all tests that will be run")
 	newWorkFlag    = flag.Bool("check.work", false, "Display and do not remove the test working directory")
@@ -83,6 +83,7 @@ func TestingT(testingT *testing.T) {
 		Stream:        *oldStreamFlag || *newStreamFlag,
 		Benchmark:     *oldBenchFlag || *newBenchFlag,
 		BenchmarkTime: benchTime,
+		MethodTimeout: *methodTimeout,
 		BenchmarkMem:  *newBenchMem,
 		KeepWorkDir:   *oldWorkFlag || *newWorkFlag,
 		Exclude:       *newExcludeFlag,
@@ -194,8 +195,8 @@ func (r *Result) Add(other *Result) {
 
 func (r *Result) Passed() bool {
 	return r.Failed == 0 && r.Panicked == 0 &&
-			r.FixturePanicked == 0 && r.Missed == 0 &&
-			r.RunError == nil
+		r.FixturePanicked == 0 && r.Missed == 0 &&
+		r.RunError == nil
 }
 
 func (r *Result) String() string {
@@ -222,6 +223,9 @@ func (r *Result) String() string {
 	}
 	if r.Panicked != 0 {
 		value += fmt.Sprintf(", %d PANICKED", r.Panicked)
+	}
+	if r.Timeouted != 0 {
+		value += fmt.Sprintf(", %d TIMEOUTED", r.Timeouted)
 	}
 	if r.FixturePanicked != 0 {
 		value += fmt.Sprintf(", %d FIXTURE-PANICKED", r.FixturePanicked)

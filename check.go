@@ -416,6 +416,7 @@ type Result struct {
 	Failed           int
 	Skipped          int
 	Panicked         int
+	Timeouted        int
 	FixturePanicked  int
 	ExpectedFailures int
 	Missed           int    // Not even tried to run, related to a panic in the fixture.
@@ -475,8 +476,10 @@ func (tracker *resultTracker) _loopRoutine() {
 							tracker.result.Succeeded++
 						}
 					}
-				case failedSt, timeoutSt:
+				case failedSt:
 					tracker.result.Failed++
+				case timeoutSt:
+					tracker.result.Timeouted++
 				case panickedSt:
 					if c.kind == fixtureKd {
 						tracker.result.FixturePanicked++
@@ -524,6 +527,7 @@ type suiteRunner struct {
 	reportedProblemLast       bool
 	benchTime                 time.Duration
 	benchMem                  bool
+	methodTimeout             time.Duration
 }
 
 type RunConf struct {
@@ -531,6 +535,7 @@ type RunConf struct {
 	Stream        bool
 	Verbose       bool
 	Filter        string
+	MethodTimeout time.Duration
 	Benchmark     bool
 	BenchmarkTime time.Duration // Defaults to 1 second
 	BenchmarkMem  bool
@@ -556,14 +561,15 @@ func newSuiteRunner(suite interface{}, runConf *RunConf) *suiteRunner {
 	suiteValue := reflect.ValueOf(suite)
 
 	runner := &suiteRunner{
-		suite:     suite,
-		output:    newOutputWriter(conf.Output, conf.Stream, conf.Verbose),
-		tracker:   newResultTracker(),
-		benchTime: conf.BenchmarkTime,
-		benchMem:  conf.BenchmarkMem,
-		tempDir:   &tempDir{},
-		keepDir:   conf.KeepWorkDir,
-		tests:     make([]*methodType, 0, suiteNumMethods),
+		suite:         suite,
+		output:        newOutputWriter(conf.Output, conf.Stream, conf.Verbose),
+		tracker:       newResultTracker(),
+		benchTime:     conf.BenchmarkTime,
+		benchMem:      conf.BenchmarkMem,
+		tempDir:       &tempDir{},
+		keepDir:       conf.KeepWorkDir,
+		tests:         make([]*methodType, 0, suiteNumMethods),
+		methodTimeout: conf.MethodTimeout,
 	}
 	if runner.benchTime == 0 {
 		runner.benchTime = 1 * time.Second
@@ -733,8 +739,12 @@ func (runner *suiteRunner) forkCall(method *methodType, kind funcKind, testName 
 		dispatcher(c)
 
 		// Don't allow a single to run more than 3 seconds!
-		if c.status() == succeededSt && time.Since(startTime) > 3*time.Second {
-			c.setStatus(timeoutSt)
+		if c.status() == succeededSt {
+			if runner.methodTimeout > 0 {
+				if time.Since(startTime) > runner.methodTimeout {
+					c.setStatus(timeoutSt)
+				}
+			}
 		}
 	})()
 	return c
@@ -1000,7 +1010,7 @@ func (ow *outputWriter) WriteCallSuccess(label string, c *C) {
 		if c.reason != "" {
 			suffix = " (" + c.reason + ")"
 		}
-		if c.status() == succeededSt {
+		if c.status() == succeededSt || c.status() == timeoutSt {
 			suffix += "\t" + c.timerString()
 		}
 		suffix += "\n"
