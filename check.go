@@ -738,13 +738,9 @@ func (runner *suiteRunner) forkCall(method *methodType, kind funcKind, testName 
 
 		dispatcher(c)
 
-		// Don't allow a single to run more than 3 seconds!
-		if c.status() == succeededSt {
-			if runner.methodTimeout > 0 {
-				if time.Since(startTime) > runner.methodTimeout {
-					c.setStatus(timeoutSt)
-				}
-			}
+		// Don't allow a single test to run too long!
+		if c.status() == succeededSt && runner.methodTimeout > 0 && time.Since(startTime) > runner.methodTimeout {
+			c.setStatus(timeoutSt)
 		}
 	})()
 	return c
