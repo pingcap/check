@@ -643,8 +643,8 @@ func (runner *suiteRunner) asyncRun(wg *sync.WaitGroup, notifyRunningSuitesCh ch
 	}
 
 	wg.Add(1)
-	c := runner.runFixture(runner.setUpSuite, "", nil)
 	go func() {
+		c := runner.runFixture(runner.setUpSuite, "", nil)
 		defer wg.Done()
 		<-notifyRunningSuitesCh
 		runner.doRun(c)
