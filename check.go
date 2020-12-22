@@ -9,6 +9,7 @@ package check
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"math/rand"
@@ -365,6 +366,7 @@ func init() {
 	if initWDErr == nil {
 		initWD = strings.Replace(initWD, "\\", "/", -1) + "/"
 	}
+	RunInGoTest = flag.Lookup("test.v") != nil || flag.Lookup("check.v") != nil
 }
 
 func nicePath(path string) string {

@@ -64,6 +64,7 @@ var (
 )
 
 var CustomVerboseFlag bool
+var RunInGoTest bool
 
 // TestingT runs all test suites registered with the Suite function,
 // printing results to stdout, and reporting any failures back to
